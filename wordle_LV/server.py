@@ -1,8 +1,3 @@
-"""
-Latviesu Wordle - Multiplayer Server
-Run this once on one machine: python server.py
-Both players then connect to this machine's IP.
-"""
 
 from flask import Flask, jsonify, request
 import random
@@ -31,7 +26,7 @@ def compute_colours(guess, target):
             continue
         if guess[i] in burti:
             colours[i] = YELLOW
-            burti[burti.index(guess[i])] = None
+            burti[burti.index(guess[i])] = None  #novers dubultu burtinu problemu (aizstaj vienu burtu ar None, lai tas vairs netiktu detektets)
     return colours
 
 
@@ -40,9 +35,9 @@ def fresh_round_state():
         "target_word":    random.choice(WORDY),
         "written_words":  [],
         "written_colours":[],
-        "current_turn":   1,   # whose turn: 1 or 2
+        "current_turn":   1,   # kuram playerid gajiens: 1 or 2
         "round_over":     False,
-        "round_winner":   None, # player id, or None for draw
+        "round_winner":   None, # player id, vai None for draw
     }
 
 
@@ -59,7 +54,7 @@ state = {
 def join():
     with lock:
         if state["players_joined"] >= 2:
-            return jsonify({"error": "Game full"}), 400
+            return jsonify({"error": "spelite pilna"}), 400
         state["players_joined"] += 1
         pid = state["players_joined"]
         return jsonify({"player_id": pid})
@@ -69,7 +64,8 @@ def join():
 def get_state():
     with lock:
         s = dict(state)
-        # Only reveal the target word once the round is over
+        # nosegt hidden wordu kamer nav uzminets
+        
         if not s["round_over"]:
             s = {k: v for k, v in s.items() if k != "target_word"}
         return jsonify(s)
@@ -96,7 +92,7 @@ def guess():
         state["written_colours"].append(colours)
 
         if all(c == GREEN for c in colours):
-            # This player guessed it!
+            # kad speletajs uzmin
             state["round_over"]   = True
             state["round_winner"] = player_id
             state["scores"][str(player_id)] += 1
@@ -104,7 +100,7 @@ def guess():
                 state["match_over"]   = True
                 state["match_winner"] = player_id
         elif len(state["written_words"]) >= 6:
-            # Used all 6 guesses — draw
+            # kad izbeidzas gajieni
             state["round_over"]   = True
             state["round_winner"] = None
         else:
@@ -137,8 +133,7 @@ if __name__ == "__main__":
     import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
-    print(f"\n=== Latviesu Wordle Serveris ===")
     print(f"Lokālais IP: {local_ip}")
-    print(f"Otrs spēlētājs lai izmanto: {local_ip}")
+    print(f"vienam speletajam jaievada: {local_ip}")
     print(f"Serveris darbojas uz porta 5000\n")
     app.run(host="0.0.0.0", port=5000, debug=False)
